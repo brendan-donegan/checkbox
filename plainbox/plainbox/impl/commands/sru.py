@@ -30,8 +30,7 @@ import logging
 import os
 import tempfile
 
-from requests.exceptions import ConnectionError, InvalidSchema, HTTPError
-
+from plainbox.impl.adapters.summary import summary
 from plainbox.impl.applogic import get_matching_job_list
 from plainbox.impl.applogic import run_job_if_possible
 from plainbox.impl.checkbox import WhiteList
@@ -139,22 +138,15 @@ class _SRUInvocation:
             try:
                 # Send the data, reading from the temporary file
                 result = transport.send(stream)
+            except summary.exception_list as exc:
+                print(summary(exc))
+            else:
                 if 'url' in result:
                     print("Successfully sent, submission status at {0}".format(
                           result['url']))
                 else:
                     print("Successfully sent, server response: {0}".format(
                           result))
-
-            except InvalidSchema as exc:
-                print("Invalid destination URL: {0}".format(exc))
-            except ConnectionError as exc:
-                print("Unable to connect to destination URL: {0}".format(exc))
-            except HTTPError as exc:
-                print(("Server returned an error when "
-                       "receiving or processing: {0}").format(exc))
-            except IOError as exc:
-                print("Problem reading a file: {0}".format(exc))
 
     def _run_all_jobs(self):
         again = True
