@@ -64,6 +64,16 @@ Code reference
     :undoc-members:
     :show-inheritance:
 
+.. automodule:: plainbox.impl.adapters
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: plainbox.impl.adapters.summary
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 .. automodule:: plainbox.impl.commands
     :members:
     :undoc-members:
