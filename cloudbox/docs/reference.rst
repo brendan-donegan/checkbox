@@ -25,21 +25,25 @@ Generic CloudBox Code
 .. automodule:: cloudbox.tests
     :members: load_unit_tests, test_suite
 
+OpenStack Specific Code
+-----------------------
+
+.. automodule:: cloudbox.openstack
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: cloudbox.config
+.. automodule:: cloudbox.openstack.api
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: cloudbox.main
+.. automodule:: cloudbox.openstack.cli
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: cloudbox.tests
+.. automodule:: cloudbox.openstack.config
     :members:
     :undoc-members:
     :show-inheritance:
