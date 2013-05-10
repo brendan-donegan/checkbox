@@ -1,0 +1,14 @@
+[run]
+branch = True
+source = cloudbox 
+omit =
+    cloudbox/tests.py
+    cloudbox/test_*.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    @public
+    @abstractmethod
+    @abstractproperty
+    raise NotImplementedError

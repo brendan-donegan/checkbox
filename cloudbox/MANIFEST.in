@@ -1,0 +1,7 @@
+include COPYING
+include README.md
+include docs/conf.py
+include jobs/*.txt.in
+include scripts/*
+include .coveragerc
+recursive-include docs *.rst
