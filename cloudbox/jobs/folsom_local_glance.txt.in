@@ -1,0 +1,6 @@
+plugin: shell
+name: glance/add_image/local
+command: glance_cli_test image --add --debug
+_description:
+ Adds an image to the deployed openstack environment via glance command line tool
+

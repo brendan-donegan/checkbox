@@ -1,0 +1,6 @@
+plugin: shell
+name: nova/launch_instance/local
+command: nova_cli_test instance --launch --debug
+_description:
+ Launches a single compute instance in the deployed openstack environment via nova command line tool
+

@@ -1,0 +1,11 @@
+plugin: shell
+name: glance/add_image/remote
+command: glance_api_test image --add --debug
+_description:
+ Adds an image to the deployed openstack environment via glance api
+
+plugin: shell
+name: nova/launch_instance/remote
+command: nova_api_test instance --launch --debug
+_description:
+ Launches a single compute instance in the deployed openstack environment via nova api  
