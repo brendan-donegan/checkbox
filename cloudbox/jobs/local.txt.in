@@ -1,0 +1,21 @@
+name: __folsom_remote__
+plugin: local
+_description: Folsom test suite via API endpoints
+command:
+  shopt -s extglob
+  cat $CLOUDBOX_SHARE/jobs/folsom_remote.txt?(.in)
+
+name: __folsom_local__glance
+plugin: local
+_description: Folsom Glance test suite
+command:
+  shopt -s extglob
+  cat $CLOUDBOX_SHARE/jobs/folsom_local_glance.txt?(.in)
+
+name: __folsom_local__nova
+plugin: local
+_description: Folsom Nova Compute test suite
+command:
+  shopt -s extglob
+  cat $CLOUDBOX_SHARE/jobs/folsom_local_nova.txt?(.in)
+
