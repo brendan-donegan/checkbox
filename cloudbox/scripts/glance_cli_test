@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""
+Copyright (C) 2013 Canonical Ltd.
+
+Authors
+  Jeff Marcom <jeff.marcom@canonical.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 3,
+as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+from argparse import ArgumentParser
+from subprocess import Popen, PIPE
+import io
+import logging
+import os
+import shlex
+import sys
+import urllib.request
+
+from cloudbox.openstack.cli import CLI as openstack_cli
+from cloudbox.openstack.config import openstack_config
+
+
+class Image(object):
+    """
+    This class provides image information as well as
+    the ability to add, delete, or control a specified image
+    from within glance.
+    """
+
+    def __init__(self, image_name, image_file, container_format, disk_format):
+
+        self.image_name = image_name
+        self.image_file = image_file
+        self.container_format = container_format
+        self.disk_format = disk_format
+
+    def download(self, url):
+        """
+        Downloads required image to be added to glance image pool.
+        Note that this is grabbing an image from a URL which is
+        not the same action that glance's cli image-download command
+        provides.
+        """
+        logging.debug("Downloading %s, from %s" % (self.image_file, url))
+
+        # Attempt download
+        try:
+            resp = urllib.request.urlretrieve(url, self.image_file)
+        except urllib.error.HTTPError as exception:
+            logging.error("Failed download: %s" % exception)
+
+    def add(self):
+
+        params = \
+            """
+            --name {} --container-format={}
+            --disk-format={} --file={}
+            """.format(self.image_name,
+                       self.container_format,
+                       self.disk_format,
+                       self.image_file)
+
+        logging.debug("Attempting to add: %s" % self.image_name)
+
+        return openstack_cli("glance").execute(
+            "image-create", params.replace("\n", ""))
+
+
+def image_test(args):
+    print("Executing Glance Image Test", file=sys.stderr)
+
+    exit_code = 1
+
+    # Image configuration parameters
+    image_name = openstack_config.Image["image_name"]
+    image_file = openstack_config.Image["image_file"]
+    container_format = openstack_config.Image["container_format"]
+    disk_format = openstack_config.Image["disk_format"]
+
+    test = Image(image_name, image_file, container_format, disk_format)
+
+    if args.add:
+        if not os.path.isfile(image_file):
+            url = "/".join((
+                openstack_config.Image["download_url"], image_file))
+            test.download(url)
+
+        if not os.path.isfile(image_file):
+            sys.exit(1)
+
+        exit_code, output = test.add()
+
+    sys.exit(exit_code)
+
+
+def main():
+    cli_parser = ArgumentParser(description="Openstack Glance Testing")
+    subparsers = cli_parser.add_subparsers()
+
+    # Sub-Main cli options
+    image_test_parser = subparsers.add_parser('image', help=("openstack "
+                                                             "glance test"))
+
+    # Sub test options
+    image_test_parser.add_argument(
+        '--add', action="store_true")
+    image_test_parser.add_argument(
+        '--debug', action="store_true")
+
+    image_test_parser.set_defaults(func=image_test)
+
+    args = cli_parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+
+    args.func(args)
+
+if __name__ == '__main__':
+    main()

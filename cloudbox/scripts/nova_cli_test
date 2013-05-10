@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""
+Copyright (C) 2013 Canonical Ltd.
+
+Authors
+  Jeff Marcom <jeff.marcom@canonical.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 3,
+as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+from argparse import ArgumentParser
+import datetime
+import json
+import logging
+import os
+import sys
+import time
+
+from cloudbox.openstack.cli import CLI as openstack_cli
+from cloudbox.openstack.config import openstack_config
+
+# Default CFG Values for Instance and Volume tests. These values are
+# intentionally hard coded here within the script as they
+# are considered part of certification criteria
+
+INSTANCE_POLLING_INTERVAL = 20
+INSTANCE_POLLING_REPEAT = 10
+
+VOLUME_POLLING_INTERVAL = 5
+VOLUME_POLLING_REPEAT = 5
+
+
+class Compute(object):
+    #def compute_stats(self):
+    #    return self.execute("hypervisor-stats")
+
+    #def list_hypervisors(self):
+    #    return self.execute("hypervisor-list")
+
+    #def list_volumes(self):
+    #    return self.execute("volume-list")
+
+    def list_instances(self):
+        return openstack_cli("nova").execute("list")
+
+    #def list_usage(self):
+    #    return self.execute("usage-list")
+
+
+class Instance(object):
+
+    def __init__(self, instance_name, image_name="", flavor_id=""):
+        self.instance_name = instance_name
+        self.image_name = image_name
+        self.flavor_id = flavor_id
+
+    def launch(self, num_of_instances=1, user_data=None):
+        logging.debug("Launching instance: %s", self.instance_name)
+
+        params = " ".join((
+            self.instance_name,
+            "--image", self.image_name,
+            "--flavor", self.flavor_id,
+            "--poll"))
+
+        if num_of_instances > 1:
+            params = " ".join((
+                params,
+                "--num-instances",
+                str(num_of_instances)))
+
+        if user_data is not None:
+            params = " ".join((params, "--user-data", user_data))
+
+        return openstack_cli("nova").execute("boot", params)
+
+    def show_info(self):
+        return openstack_cli("nova").execute("show", self.instance_name)
+
+    def get_console_output(self, length=100):
+        """
+        Returns boot log of launched instance. Specify length for
+        the amount of lines you'd like to have returned.
+        """
+        params = "{} --length {}".format(
+            self.instance_name, length)
+        return openstack_cli("nova").execute("console-log", params)
+
+
+def instance_test(args):
+    print("Executing Nova Instance Test", file=sys.stderr)
+
+    exit_code = 1
+
+    # Instance configuration parameters
+    instance_name = openstack_config.Compute["instance_name"]
+    flavor_id = openstack_config.Compute["flavor_id"]
+    image_name = openstack_config.Image["image_name"]
+
+    test = Instance(instance_name, image_name, flavor_id)
+    compute_info = Compute()
+
+    if args.launch:
+        exit_code, output = test.launch(1)
+        # Wait for image to boot
+        logging.debug("Waiting for image: %s to boot...", image_name)
+        state = ""
+
+        for inc in range(0, INSTANCE_POLLING_REPEAT):
+            output = compute_info.list_instances()
+            time.sleep(INSTANCE_POLLING_INTERVAL)
+
+            json_output = json.loads(openstack_cli.format_to_json(output))
+            for key, value in json_output.items():
+                if json_output[key]["Name"] == self.image_name:
+                    state = json_output[key]["Status"]
+
+            logging.debug("Polling...")
+            if "RUNNING" in state:
+                logging.debug("Instance is running")
+                break
+            elif "ERROR" in state:
+                logging.debug("Critical instance launch error")
+                break
+
+        boot_log = test.get_console_output(4)
+
+        print(test.show_info()[1], file=sys.stderr)
+        if "boot finished" not in boot_log[1]:
+            print("Failed to boot instance", file=sys.stderr)
+            exit_code = 1
+        else:
+            print("Instance booted successfully", file=sys.stderr)
+
+    sys.exit(exit_code)
+
+
+def main():
+    cli_parser = ArgumentParser(description="Openstack Nova Compute Testing")
+    subparsers = cli_parser.add_subparsers()
+
+    # High-level options
+    cli_parser.add_argument("--debug", action="store_true")
+
+    # Sub-Main cli options
+    instance_test_parser = subparsers.add_parser(
+        'instance', help=("openstack nova instance test"))
+
+    # Sub test options
+    instance_test_parser.add_argument('--launch', action="store_true")
+    instance_test_parser.add_argument('--debug', action="store_true")
+
+    instance_test_parser.set_defaults(func=instance_test)
+
+    args = cli_parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+
+    args.func(args)
+
+if __name__ == '__main__':
+    main()
